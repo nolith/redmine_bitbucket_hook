@@ -1,12 +1,12 @@
 require 'json'
 
-class GithubHookController < ApplicationController
+class BitbucketHookController < ApplicationController
 
   skip_before_filter :verify_authenticity_token, :check_if_login_required
 
   def index
     payload = JSON.parse(params[:payload])
-    logger.debug { "Received from Github: #{payload.inspect}" }
+    logger.debug { "Received from Bitbucket: #{payload.inspect}" }
 
     # For now, we assume that the repository name is the same as the project identifier
     identifier = payload['repository']['name']
@@ -16,11 +16,11 @@ class GithubHookController < ApplicationController
     
     repository = project.repository
     raise TypeError, "Project '#{identifier}' has no repository" if repository.nil?
-    raise TypeError, "Repository for project '#{identifier}' is not a Git repository" unless repository.is_a?(Repository::Git)
+    raise TypeError, "Repository for project '#{identifier}' is not a Mercurial repository" unless repository.is_a?(Repository::Mercurial)
 
     # Get updates from the Github repository
     #command = "cd '#{repository.url}' && cd .. && git pull --rebase"
-    command = "cd '#{repository.url}' && git fetch origin && git reset --soft refs/remotes/origin/master"
+    command = "cd '#{repository.url}' && hg pull"
     exec(command)
 
     # Fetch the new changesets into Redmine
@@ -32,9 +32,9 @@ class GithubHookController < ApplicationController
   private
   
   def exec(command)
-    logger.info { "GithubHook: Executing command: '#{command}'" }
+    logger.info { "BitbucketHook: Executing command: '#{command}'" }
     output = `#{command}`
-    logger.info { "GithubHook: Shell returned '#{output}'" }
+    logger.info { "BitbucketHook: Shell returned '#{output}'" }
   end
 
 end
